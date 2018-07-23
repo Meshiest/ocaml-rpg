@@ -28,16 +28,20 @@ and item = {
   item_type: item_type;
 }
 
+(* Flags to denote current state of the game *)
+and flag = StartingRoomKey
+
 (* Current state of the player *)
 and game_state = {
   room: room;
   gold: int;
   inventory: item list;
   health: int;
+  flags: flag list;
 }
 
 (* Fancy Room Option *)
-and 'a option = Some of 'a | Undecided of (game_state -> 'a)  | None
+and 'a option = Some of 'a | Undecided of (game_state -> 'a option)  | None
 
 (* Print line shortcut function *)
 let println (str: string) = print_string (str ^ "\n")
@@ -57,21 +61,52 @@ let print_item ({name; count; item_type; _}: item) =
   ) ^ " (" ^ string_of_item_type item_type ^ ")")
 
 (* check if the player has a specific items *)
-let has_item (state: game_state) (name: string) =
-  let rec search = function
-    | x::xs -> if x.name = name then true else search xs
-    | [] -> false
-  in search state.inventory
+let num_item (state: game_state) (name: string) =
+  (List.find (fun i -> i.name = name) state.inventory).count
 
 (* Remove an item from the player's inventory *)
-let remove_item (state: game_state) (name: string) =
-  let rec filter = function
-    | x::xs -> if x.name = name then filter xs else x::filter xs
-    | [] -> []
-  in filter state.inventory
+let remove_item (state: game_state) (name: string) (count: int) = {
+  state with inventory = 
+    (* Remove count from specified item *)
+    List.map (fun i -> if i.name = name then {i with count = i.count - count} else i) state.inventory |>
+    (* Remove items with zero length *)
+    List.filter (fun i -> i.count > 0)
+}
 
-let add_item (state: game_state) (item: item) =
-  {state with inventory = state.inventory @ [item]}
+(* Either increment an item or add it to the inventory *)
+let add_item (state: game_state) (item: item) (count: int) = {
+  state with inventory =
+    if List.exists (fun i -> i.name = item.name) state.inventory then
+      (*  increment the count of the specific item if we have it*)
+      List.map (fun i -> if i.name = item.name then {i with count = i.count + count} else i) state.inventory
+    else
+      (* otherwise if we don't have the item in the inventory, add it *)
+      state.inventory @ [item]
+}
+
+
+(* Add a flag to the state *)
+let add_flag (state: game_state) (flag: flag) = {
+  state with flags = flag::state.flags
+}
+
+(* Determine if the state has a specific flag *)
+let has_flag (state: game_state) (flag: flag) =
+  List.exists ((=)flag) state.flags
+
+(* Remove a flag upon the first instance *)
+let remove_flag (state: game_state) (flag: flag) = {
+  state with flags = 
+    let rec find = function
+      | x::xs -> if x = flag then xs else x::find xs
+      | [] -> []
+    in find state.flags
+}
+
+(* Remove every instance of a flag *)
+let remove_flags (state: game_state) (flag: flag) = {
+  state with flags = List.filter ((!=)flag) state.flags
+}
 
 (* Function to be used when a room has no action *)
 let no_action (state: game_state) =
@@ -97,12 +132,12 @@ let starting_room = {
   east = None;
   west = None;
   title = "Starting Room";
-  interaction = fun state ->
-    if has_item state "Copper Key" then
+  interaction = fun state -> (* if we have a copper key, do nothing *)
+    if has_flag state StartingRoomKey then
       no_action state
     else (
       println "Acquired a 'Copper Key'";
-      add_item state copper_key_item
+      add_item (add_flag state StartingRoomKey) copper_key_item 1
     )
 }
 
@@ -112,6 +147,7 @@ let new_state () = {
   gold = 0;
   health = 100;
   inventory = [];
+  flags = [];
 }
 
 (* Recursive game loop where commands are entered and handled *)
