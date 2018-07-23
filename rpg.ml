@@ -1,3 +1,4 @@
+open Str
 
 (* A room in the dungeon *)
 type room = {
@@ -66,7 +67,7 @@ let num_item (state: game_state) (name: string) =
 
 (* Remove an item from the player's inventory *)
 let remove_item (state: game_state) (name: string) (count: int) = {
-  state with inventory = 
+  state with inventory =
     (* Remove count from specified item *)
     List.map (fun i -> if i.name = name then {i with count = i.count - count} else i) state.inventory |>
     (* Remove items with zero length *)
@@ -91,17 +92,36 @@ let add_flag (state: game_state) (flag: flag) = {
 }
 
 (* Determine if the state has a specific flag *)
-let has_flag (state: game_state) (flag: flag) =
-  List.exists ((=)flag) state.flags
+let has_flag ({flags; _}: game_state) (flag: flag) =
+  List.exists ((=)flag) flags
 
 (* Remove a flag only upon the first encounter *)
 let remove_flag (state: game_state) (flag: flag) = {
-  state with flags = 
+  state with flags =
     let rec find = function
       | x::xs -> if x = flag then xs else x::find xs
       | [] -> []
     in find state.flags
 }
+
+(* Given a small string, finds an item with a matching set of characters *)
+let item_from_str ({inventory; _}: game_state) (str: string) =
+  (* This is a little complicated...
+   * Takes a string, breaks it into a list of characters
+   * Joins these characters with ".*"
+   * Uses this new string as a pattern for matching other strings
+   * "foo bar" -> "f.*o.*o.* .*b.*a.*r.*"
+   * This means the string "cprsd" produce a regex to match "copper sword"
+   * *)
+  let pattern = Str.regexp (".*" ^ List.fold_right (fun a b -> a ^ ".*" ^ b) (Str.split (Str.regexp "") (String.lowercase_ascii str)) "") in
+  (* Helper function for checking if the pattern matches *)
+  let contains_str ({name; _}: item) = Str.string_match pattern (String.lowercase_ascii name) 0 in
+
+  (* Determine if we have a matching item *)
+  if List.exists contains_str inventory then
+    Some (List.find contains_str inventory)
+  else
+    None
 
 (* Remove every instance of a flag *)
 let remove_flags (state: game_state) (flag: flag) = {
@@ -152,7 +172,8 @@ let new_state () = {
 
 (* Recursive game loop where commands are entered and handled *)
 let rec game_loop (state: game_state) =
-  let input = read_line() in
+  print_string "> ";
+  let input = read_line () in
 
   (* Helper for inspecting the room *)
   let inspect () =
@@ -163,18 +184,52 @@ let rec game_loop (state: game_state) =
     state.room.interaction state |> game_loop in
 
   (* Helper for printing the player's inventory contents *)
-  let inventory() =
+  let inventory () =
     println "Inventory: ";
-    List.map print_item state.inventory in
+    List.iter print_item state.inventory;
+    game_loop state in
+
+  let use () =
+    print_string "Find Item: ";
+    let name = read_line () in
+    match item_from_str state name with
+      (* Handle using regular items *)
+      | Some {name; item_type = Item use_fn; _} ->
+          println ("Using item '" ^ name ^ "'");
+          use_fn state |> game_loop
+
+      (* Handle using weapons *)
+      | Some {name; item_type = Weapon atk; _} ->
+          println ("Equipping weapon '" ^ name ^ "'");
+          (* TODO: implement equipping weapons *)
+          game_loop state
+
+      (* Handle using armor *)
+      | Some {name; item_type = Armor def; _} ->
+          println ("Equipping armor '" ^ name ^ "'");
+          (* TODO: implement equipping armor *)
+          game_loop state
+
+      (* Handle invalid search *)
+      | None ->
+          println "No item found";
+          game_loop state
+
+      (* Handle loot/items not programmed use cases for *)
+      | _ ->
+          println "No usable item found";
+          game_loop state in
 
   (* input handler *)
   match input with
     | "help" -> println "Commands:
     action/a - Invoke the room's special action
+        help - This help message
  inventory/i - Displays inventory contents
       look/l - A brief description of the room
-        help - This help message
-        quit - Closes the game" ; game_loop state
+        quit - Closes the game
+       use/u - Use an item (will ask for a name)
+              " ; game_loop state
 
     | "look" -> inspect()
     | "l" -> inspect()
@@ -184,6 +239,9 @@ let rec game_loop (state: game_state) =
 
     | "action" -> action()
     | "a" -> action()
+
+    | "use" -> use()
+    | "u" -> use()
 
     | "quit" -> println "Thanks for playing!" ; new_state ()
 
