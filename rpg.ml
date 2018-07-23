@@ -94,7 +94,7 @@ let add_flag (state: game_state) (flag: flag) = {
 let has_flag (state: game_state) (flag: flag) =
   List.exists ((=)flag) state.flags
 
-(* Remove a flag upon the first instance *)
+(* Remove a flag only upon the first encounter *)
 let remove_flag (state: game_state) (flag: flag) = {
   state with flags = 
     let rec find = function
@@ -165,10 +165,7 @@ let rec game_loop (state: game_state) =
   (* Helper for printing the player's inventory contents *)
   let inventory() =
     println "Inventory: ";
-    let rec helper = function
-      | x::xs -> print_item x ; helper xs
-      | [] -> game_loop state
-    in helper state.inventory in
+    List.map print_item state.inventory in
 
   (* input handler *)
   match input with
