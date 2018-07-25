@@ -92,8 +92,10 @@ let rec add_room ((loc, room): vec * room option) (node: quad_node) : quad_node 
   } in
 
   match node with
+    (* in the odd chance this is being used wrong, we'll handle it correctly anyway! *)
     | {pos; value = None; _} when pos = loc -> {node with value = room}
 
+    (* Handle the different quadrant, create a new node if there is some room already here *)
     | {pos; north_east = Some next; _} when loc.x < pos.x && loc.y < pos.y ->
         {node with north_east = Some (add_room (loc, room) next)}
     | {pos; north_east = None; _} when loc.x < pos.x && loc.y < pos.y ->
@@ -180,7 +182,7 @@ let item_from_str ({inventory; _}: game_state) (str: string) : item option =
    * Takes a string, breaks it into a list of characters
    * Joins these characters with ".*"
    * Uses this new string as a pattern for matching other strings
-   * "foo bar" -> "f.*o.*o.* .*b.*a.*r.*"
+   * "foo bar" -> ".*f.*o.*o.* .*b.*a.*r.*"
    * This means the string "cprsd" produce a regex to match "copper sword"
    * *)
   let pattern = Str.regexp (".*" ^ List.fold_right (fun a b -> a ^ ".*" ^ b) (Str.split (Str.regexp "") (String.lowercase_ascii str)) "") in
@@ -365,7 +367,7 @@ let rec game_loop (state: game_state) : unit =
  inventory/i - Displays inventory contents
       look/l - A brief description of the room
        use/u - Use an item (will ask for a name)
-  
+
   Movement:
      north/n - Move north if possible
      south/s - Move south if possible
