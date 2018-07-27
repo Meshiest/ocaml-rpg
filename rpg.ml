@@ -47,7 +47,8 @@ and item = {
 }
 
 (* Flags to denote current state of the game *)
-and flag = StartingRoomKey | WallTorches1
+and flag = StartingRoomKey | WallTorches1 | LibraryLever |
+  CandleA | CandleB | CandleC
 
 (* Current state of the player *)
 and game_state = {
@@ -220,6 +221,19 @@ let copper_key_item = {
   item_type = Item no_use_yet;
 }
 
+let candle_item = {
+  name = "Candle";
+  count = 1;
+  item_type = Item no_use_yet;
+}
+
+let candle_lit_item = {
+  name = "Lit Candle";
+  count = 1;
+  item_type = Item no_use_yet;
+}
+
+
 (* Default room the player always starts in *)
 let starting_room : room = {
   title = "Starting Room";
@@ -246,20 +260,58 @@ let root_node : quad_node = {
 add_room ({x = 0; y = -1}, Undecided (fun state ->
   if has_flag state StartingRoomKey then
     Some {
-      title = "Poorly lit corridor";
+      title = "Poorly Lit Corridor";
       coord = {x = 0; y = -1};
-      interaction = no_action;
-      event = fun state ->
+      interaction = (fun state ->
+        if num_item state "Candle" > 0 then (
+          println "Lit a Candle on a torch";
+          add_item (remove_item state "Candle" 1) candle_lit_item 1
+        ) else
+          no_action state
+      );
+      event = (fun state ->
         if has_flag state WallTorches1 then
           state
         else (
           println "The torches on the wall light up";
           add_flag state WallTorches1
         )
+      );
 
     }
   else None
+)) |>
+add_room ({x = 0; y = -2}, Some {
+  title = "Library of Runic Scrolls";
+  coord = {x = 0; y = -2};
+  interaction = (fun state ->
+    println "You toggle the lever...";
+    if has_flag state LibraryLever then
+      remove_flag state LibraryLever
+    else
+      add_flag state LibraryLever);
+  event = fun state ->
+    println "There is a wooden lever in the middle of the room.";
+    state
+}) |>
+add_room ({x = -1; y = 0}, Undecided (fun state ->
+  if has_flag state LibraryLever then
+    Some {
+      title = "Hidden Closet";
+      coord = {x = -1; y = 0};
+      interaction = (fun state -> (* if we have a copper key, do nothing *)
+        if has_flag state CandleA then
+          no_action state
+        else (
+          println "Acquired a 'Candle'";
+          add_item (add_flag state CandleA) candle_item 1
+        )
+      );
+      event = no_event;
+    }
+  else None
 ))
+
 (* TODO: add more rooms *)
 
 let lookup_room : vec -> room option = lookup_room_node root_node
@@ -312,6 +364,7 @@ let rec game_loop (state: game_state) : unit =
     List.iter print_item state.inventory;
     game_loop state in
 
+  (* Helper function for handling how items are used *)
   let use () : unit =
     print_string "Find Item: ";
     let name = read_line () in
@@ -343,6 +396,8 @@ let rec game_loop (state: game_state) : unit =
           println "No usable item found";
           game_loop state in
 
+  (* Helper function for changing which room the player is in
+   * Will automatically convert undecided options into some or none based on the current state *)
   let move ((x, y): int * int) : unit =
     let rec handleroom = function
       | Undecided fn -> handleroom (fn state)
@@ -366,7 +421,7 @@ let rec game_loop (state: game_state) : unit =
     action/a - Invoke the room's special action
  inventory/i - Displays inventory contents
       look/l - A brief description of the room
-       use/u - Use an item (will ask for a name)
+       use/u - Use an item (will prompt for item name)
 
   Movement:
      north/n - Move north if possible
@@ -391,10 +446,10 @@ let rec game_loop (state: game_state) : unit =
     | "n" -> move (0, -1)
     | "south" -> move (0, 1)
     | "s" -> move (0, 1)
-    | "east" -> move (-1, 0)
-    | "e" -> move (-1, 0)
-    | "west" -> move (1, 0)
-    | "w" -> move (1, 0)
+    | "east" -> move (1, 0)
+    | "e" -> move (1, 0)
+    | "west" -> move (-1, 0)
+    | "w" -> move (-1, 0)
 
     | "quit" -> println "Thanks for playing!" ; ()
 
