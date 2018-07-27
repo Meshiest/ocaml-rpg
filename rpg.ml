@@ -134,6 +134,10 @@ let print_item ({name; count; item_type; _}: item) : unit =
     if count = 1 then "" else "x" ^ string_of_int count
   ) ^ " (" ^ string_of_item_type item_type ^ ")")
 
+(* check if the player has an item *)
+let has_item (state: game_state) (name: string) : bool =
+  List.exists (fun i -> i.name = name) state.inventory
+
 (* check if the player has a specific items *)
 let num_item (state: game_state) (name: string) : int =
   (List.find (fun i -> i.name = name) state.inventory).count
@@ -150,12 +154,12 @@ let remove_item (state: game_state) (name: string) (count: int) : game_state = {
 (* Either increment an item or add it to the inventory *)
 let add_item (state: game_state) (item: item) (count: int) : game_state = {
   state with inventory =
-    if List.exists (fun i -> i.name = item.name) state.inventory then
+    if has_item state item.name then
       (*  increment the count of the specific item if we have it*)
       List.map (fun i -> if i.name = item.name then {i with count = i.count + count} else i) state.inventory
     else
       (* otherwise if we don't have the item in the inventory, add it *)
-      state.inventory @ [item]
+      state.inventory @ [{item with count}]
 }
 
 
@@ -217,19 +221,19 @@ let no_use_yet (state: game_state) : game_state =
 (* List of items *)
 let copper_key_item = {
   name = "Copper Key";
-  count = 1;
+  count = 0;
   item_type = Item no_use_yet;
 }
 
 let candle_item = {
   name = "Candle";
-  count = 1;
+  count = 0;
   item_type = Item no_use_yet;
 }
 
 let candle_lit_item = {
   name = "Lit Candle";
-  count = 1;
+  count = 0;
   item_type = Item no_use_yet;
 }
 
@@ -263,7 +267,7 @@ add_room ({x = 0; y = -1}, Undecided (fun state ->
       title = "Poorly Lit Corridor";
       coord = {x = 0; y = -1};
       interaction = (fun state ->
-        if num_item state "Candle" > 0 then (
+        if has_item state "Candle" then (
           println "Lit a Candle on a torch";
           add_item (remove_item state "Candle" 1) candle_lit_item 1
         ) else
