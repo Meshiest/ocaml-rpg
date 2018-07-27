@@ -1,9 +1,22 @@
+(* The types module contains all the records for game state storage *)
 open Types
+
+(* The quadtree is an efficient means of storing coordinates with fast lookup and insertion times *)
 open Quadtree
+
+(* Simple utilities that are not specific to this project *)
 open Utils
+
+(* Helper functions for keeping track of items in a player's inventory *)
 open Item
+
+(* The core input handling and human interfacing part of the game *)
 open Core
+
+(* Simple utilities that are specific to this project *)
 open Helpers
+
+(* Helper functions for managing flags in the game state *)
 open Flags
 
 (* List of items *)
@@ -110,6 +123,7 @@ let initial_state : game_state = {
   flags = [];
 };;
 
+(* Start the game! *)
 println "Type 'help' for more info, 'quit' to quit";;
 game_loop initial_state
 
