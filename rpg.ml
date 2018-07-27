@@ -24,6 +24,7 @@ let candle_lit_item = {
   count = 0;
   item_type = Item no_use_yet;
 }
+
 (* Root node for room storage *)
 let root_node : room option quad_node = empty_node |> (* Pipe the initial node into the next room function, this can be chained *)
 

@@ -17,7 +17,7 @@ let rec game_loop (state: game_state) : unit =
   (* Shorthand lookup helper function *)
   let lookup_room (pos: vec) : room option =
     try quad_find state.map pos
-    with QuadError _ -> None in
+    with Not_found -> None in
 
   (* Helper for inspecting the room *)
   let inspect () : unit =
