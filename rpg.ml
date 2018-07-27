@@ -19,23 +19,61 @@ open Helpers
 (* Helper functions for managing flags in the game state *)
 open Flags
 
+(* An example of an interactive event that can be created when a room is entered *)
+open Battle
+
+(* Basic rat monster *)
+let rat_monster = {
+  name = "Rat";
+  pattern = Static [Defend; Attack; Attack; Defend];
+  hitpoints = 5;
+  atk = 1;
+  def = 1;
+  can_flee = true;
+}
+
 (* List of items *)
+let silver_key_item = {
+  name = "Silver Key";
+  count = 0;
+  item_type = Item (fun state -> println "This item unlocks silver locks"; state);
+}
+
+let copper_sword_item = {
+  name = "Copper Sword";
+  count = 0;
+  item_type = Weapon 1;
+}
+
 let copper_key_item = {
   name = "Copper Key";
   count = 0;
-  item_type = Item no_use_yet;
+  item_type = Item (fun state ->
+    if state.room.title = "Dark Closet" then (
+      println ("You unlock the copper lock, but your key gets stuck...\n" ^
+        "Fortunately, you find some items!\n +1 Silver Key\n +1 Copper Sword\n" ^
+        "Make sure you equip your sword before it's too late!"
+      );
+      add_item (add_item (remove_item state "Copper Key" 1) silver_key_item 1) copper_sword_item 1
+    ) else (
+      println "This item unlocks copper locks";
+      state
+    )
+  );
 }
 
 let candle_item = {
   name = "Candle";
   count = 0;
-  item_type = Item no_use_yet;
+  item_type = Item (fun state -> println "This item can be lit on a torch"; state);
 }
 
 let candle_lit_item = {
   name = "Lit Candle";
   count = 0;
-  item_type = Item no_use_yet;
+  item_type = Item (fun state ->
+    println "You put out the candle flame...";
+    add_item (remove_item state "Lit Candle" 1) candle_item 1);
 }
 
 (* Root node for room storage *)
@@ -55,7 +93,7 @@ quad_add ({x = 0; y = 0}, Some {
 }) |>
 
 quad_add ({x = 0; y = -1}, Undecided (fun state ->
-  if has_flag state "StartingRoomKey" then
+  if has_item state "Copper Key" then
     Some {
       title = "Poorly Lit Corridor";
       coord = {x = 0; y = -1};
@@ -72,6 +110,36 @@ quad_add ({x = 0; y = -1}, Undecided (fun state ->
         else (
           println "The torches on the wall light up";
           add_flag state "WallTorches1"
+        )
+      );
+
+    }
+  else None
+)) |>
+
+quad_add ({x = 1; y = 0}, Undecided (fun state ->
+  if has_item state "Silver Key" then
+    Some {
+      title = "Rat Nest";
+      coord = {x = 1; y = 0};
+      interaction = no_action;
+      event = (fun state ->
+        if has_flag state "KillRat" then (
+          println "There's a rat corpse on the floor";
+          state
+        ) else (
+          println "You hear a loud hiss, but it's too late...";
+          enter_battle state rat_monster (fun state ->
+            println "You defeated the rat!\n +10 Gold\n +1 Rat Fang";
+            add_item (add_flag {state with gold = state.gold + 10} "KillRat") ({
+              name = "Rat Fang";
+              item_type = Loot 10;
+              count = 0;
+            }) 1
+          ) (fun state ->
+            println "Better luck next time";
+            state;
+          )
         )
       );
 
@@ -96,17 +164,23 @@ quad_add ({x = 0; y = -2}, Some {
 quad_add ({x = -1; y = 0}, Undecided (fun state ->
   if has_flag state "LibraryLever" then
     Some {
-      title = "Hidden Closet";
+      title = "Dark Closet";
       coord = {x = -1; y = 0};
       interaction = (fun state -> (* if we have a copper key, do nothing *)
         if has_flag state "CandleA" then
           no_action state
         else (
-          println "Acquired a 'Candle'";
+          println "You pick up a 'Candle' from the floor";
           add_item (add_flag state "CandleA") candle_item 1
         )
       );
-      event = no_event;
+      event = (fun state ->
+        if has_item state "Lit Candle" then (
+          println "The light from your candle unveils a small copper lock";
+          state
+        ) else
+          state
+      );
     }
   else None
 ))
@@ -120,6 +194,8 @@ let initial_state : game_state = {
   gold = 0;
   health = 100;
   inventory = [];
+  weapon = None;
+  armor = None;
   flags = [];
 };;
 

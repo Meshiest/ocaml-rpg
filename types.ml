@@ -35,6 +35,8 @@ and game_state = {
   gold: int;
   inventory: item list;
   health: int;
+  weapon: item option;
+  armor: item option;
   flags: string list;
 }
 

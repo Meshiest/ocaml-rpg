@@ -2,139 +2,157 @@ open Quadtree
 open Types
 open Utils
 open Item
+open Helpers
 
 (* Recursive game loop where commands are entered and handled *)
 let rec game_loop (state: game_state) : unit =
-  print_string "> ";
-  let input = read_line () in
+  if state.health <= 0 then
+    println "You died... Game Over"
+  else (
+    print_string "> ";
 
-  (* Helper for shifting a coord *)
-  let offset ((x, y): int * int) : vec = {
-    x = x + state.room.coord.x;
-    y = y + state.room.coord.y;
-  } in
+    let input = read_line () in
 
-  (* Shorthand lookup helper function *)
-  let lookup_room (pos: vec) : room option =
-    try quad_find state.map pos
-    with Not_found -> None in
+    (* Helper for shifting a coord *)
+    let offset ((x, y): int * int) : vec = {
+      x = x + state.room.coord.x;
+      y = y + state.room.coord.y;
+    } in
 
-  (* Helper for inspecting the room *)
-  let inspect () : unit =
-    (* Helper for determining if a room is open given the current state *)
-    let rec is_open (room: room option) : bool = match room with
-      | Undecided fn -> is_open (fn state)
-      | Some room -> true
-      | None -> false in
+    (* Shorthand lookup helper function *)
+    let lookup_room (pos: vec) : room option =
+      try quad_find state.map pos
+      with Not_found -> None in
 
-    (* Fold to create a "NSEW" string based on available rooms *)
-    let directions = List.fold_left (fun str (x, y, ch) ->
-      str ^ if offset (x, y) |> lookup_room |> is_open then ch else ""
-    ) "" [(0, -1, "N"); (0, 1, "S"); (1, 0, "E"); (-1, 0, "W")] in
+    (* Helper for inspecting the room *)
+    let inspect () : unit =
+      (* Helper for determining if a room is open given the current state *)
+      let rec is_open (room: room option) : bool = match room with
+        | Undecided fn -> is_open (fn state)
+        | Some room -> true
+        | None -> false in
 
-    (* Print out room title and available directions *)
-    println ("You are in '" ^ state.room.title ^ "' " ^
-      "(" ^ string_of_int state.room.coord.x ^ ", " ^ string_of_int state.room.coord.y ^ ") " ^
-      "(" ^ directions ^ ")");
-    game_loop state in
+      (* Fold to create a "NSEW" string based on available rooms *)
+      let directions = List.fold_left (fun str (x, y, ch) ->
+        str ^ if offset (x, y) |> lookup_room |> is_open then ch else ""
+      ) "" [(0, -1, "N"); (0, 1, "S"); (1, 0, "E"); (-1, 0, "W")] in
 
-  (* Helper for invoking room's action *)
-  let action () : unit =
-    state.room.interaction state |> game_loop in
+      (* Print out room title and available directions *)
+      println ("You are in '" ^ state.room.title ^ "' " ^
+        "(" ^ string_of_int state.room.coord.x ^ ", " ^ string_of_int state.room.coord.y ^ ") " ^
+        "(" ^ directions ^ ")");
+      game_loop state in
 
-  (* Helper for printing the player's inventory contents *)
-  let inventory () : unit =
-    println "Inventory: ";
-    List.iter print_item state.inventory;
-    game_loop state in
+    (* Helper for invoking room's action *)
+    let action () : unit =
+      state.room.interaction state |> game_loop in
 
-  (* Helper function for handling how items are used *)
-  let use () : unit =
-    print_string "Find Item: ";
-    let name = read_line () in
-    match item_from_str state name with
-      (* Handle using regular items *)
-      | Some {name; item_type = Item use_fn; _} ->
-          println ("Using item '" ^ name ^ "'");
-          use_fn state |> game_loop
+    (* Helper for printing the player's inventory contents *)
+    let inventory () : unit =
+      let rec print_item_option (item: item option) : unit = match item with
+        | Some item -> print_item item
+        | None -> println "None"
+        | Undecided fn -> print_item_option (fn state) in
 
-      (* Handle using weapons *)
-      | Some {name; item_type = Weapon atk; _} ->
-          println ("Equipping weapon '" ^ name ^ "'");
-          (* TODO: implement equipping weapons *)
-          game_loop state
+      print_string ("   Health: " ^ string_of_int state.health ^
+        "\n     Gold: " ^ string_of_int state.gold ^
+        "\n   Weapon: ");
+      print_item_option state.weapon;
+      print_string "    Armor: ";
+      print_item_option state.armor;
+      println "Inventory: ";
+      if state.inventory = [] then
+        println "  Empty"
+      else
+        List.iter print_item state.inventory;
+      game_loop state in
 
-      (* Handle using armor *)
-      | Some {name; item_type = Armor def; _} ->
-          println ("Equipping armor '" ^ name ^ "'");
-          (* TODO: implement equipping armor *)
-          game_loop state
+    (* Helper function for handling how items are used *)
+    let use () : unit =
+      print_string "Find Item: ";
+      let name = read_line () in
+      match item_from_str state name with
+        (* Handle using regular items *)
+        | Some {name; item_type = Item use_fn; _} ->
+            println ("Using item '" ^ name ^ "'");
+            use_fn state |> game_loop
 
-      (* Handle invalid search *)
-      | None ->
-          println "No item found";
-          game_loop state
+        (* Handle using weapons *)
+        | Some {name; item_type = Weapon atk; _} ->
+            println ("Equipping weapon '" ^ name ^ "'");
+            game_loop (equip_weapon (dequip_weapon state) {name; item_type = Weapon atk; count = 1})
 
-      (* Handle loot/items not programmed use cases for *)
-      | _ ->
-          println "No usable item found";
-          game_loop state in
+        (* Handle using armor *)
+        | Some {name; item_type = Armor def; _} ->
+            println ("Equipping armor '" ^ name ^ "'");
+            game_loop (equip_armor (dequip_weapon state) {name; item_type = Armor def; count = 1})
 
-  (* Helper function for changing which room the player is in
-   * Will automatically convert undecided options into some or none based on the current state *)
-  let move ((x, y): int * int) : unit =
-    let rec handleroom = function
-      | Undecided fn -> handleroom (fn state)
-      | Some room ->
-          println ("You have entered '" ^ room.title ^ "'");
-          (* Run the room's event, then continue the game *)
-          room.event {state with room} |> game_loop
-      | None ->
-          println ("There's no entrance this way");
-          game_loop state
-    in offset (x, y) |> lookup_room |> handleroom in
+        (* Handle invalid search *)
+        | None ->
+            println "No item found";
+            game_loop state
 
-  (* input handler *)
-  match input with
-    | "help" -> println "Commands:
-  System:
-        help - This help message
-        quit - Closes the game
+        (* Handle loot/items not programmed use cases for *)
+        | _ ->
+            println "No usable item found";
+            game_loop state in
 
-  Interaction:
-    action/a - Invoke the room's special action
- inventory/i - Displays inventory contents
-      look/l - A brief description of the room
-       use/u - Use an item (will prompt for item name)
+    (* Helper function for changing which room the player is in
+     * Will automatically convert undecided options into some or none based on the current state *)
+    let move ((x, y): int * int) : unit =
+      let rec handleroom = function
+        | Undecided fn -> handleroom (fn state)
+        | Some room ->
+            println ("You have entered '" ^ room.title ^ "'");
+            (* Run the room's event, then continue the game *)
+            room.event {state with room} |> game_loop
+        | None ->
+            println ("There's no entrance this way");
+            game_loop state
+      in offset (x, y) |> lookup_room |> handleroom in
 
-  Movement:
-     north/n - Move north if possible
-     south/s - Move south if possible
-      east/e - Move east if possible
-      west/w - Move west if possible
-                " ; game_loop state
+    (* input handler *)
+    match input with
+      | "help" -> println "Commands:
+    System:
+          help - This help message
+          quit - Closes the game
 
-    | "look" -> inspect ()
-    | "l" -> inspect ()
+    Interaction:
+      action/a - Invoke the room's special action
+   inventory/i - Displays inventory contents
+        look/l - A brief description of the room
+         use/u - Use an item (will prompt for item name)
 
-    | "inventory" -> inventory ()
-    | "i" -> inventory ()
+    Movement:
+       north/n - Move north if possible
+       south/s - Move south if possible
+        east/e - Move east if possible
+        west/w - Move west if possible
+                  " ; game_loop state
 
-    | "action" -> action ()
-    | "a" -> action ()
+      | "look" -> inspect ()
+      | "l" -> inspect ()
 
-    | "use" -> use ()
-    | "u" -> use ()
+      | "inventory" -> inventory ()
+      | "i" -> inventory ()
 
-    | "north" -> move (0, -1)
-    | "n" -> move (0, -1)
-    | "south" -> move (0, 1)
-    | "s" -> move (0, 1)
-    | "east" -> move (1, 0)
-    | "e" -> move (1, 0)
-    | "west" -> move (-1, 0)
-    | "w" -> move (-1, 0)
+      | "action" -> action ()
+      | "a" -> action ()
 
-    | "quit" -> println "Thanks for playing!" ; ()
+      | "use" -> use ()
+      | "u" -> use ()
 
-    | _ -> println "Invalid Command" ; game_loop state;;
+      | "north" -> move (0, -1)
+      | "n" -> move (0, -1)
+      | "south" -> move (0, 1)
+      | "s" -> move (0, 1)
+      | "east" -> move (1, 0)
+      | "e" -> move (1, 0)
+      | "west" -> move (-1, 0)
+      | "w" -> move (-1, 0)
+
+      | "quit" -> println "Thanks for playing!" ; ()
+
+      | _ -> println "Invalid Command" ; game_loop state
+  );;
