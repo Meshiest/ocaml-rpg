@@ -21,3 +21,8 @@ To run this, you need OCaml installed.
 ### Cleanup
 
     make clean
+
+### Screenshots
+
+<img src="https://i.imgur.com/B9lzmmG.png" width="250">
+<img src="https://i.imgur.com/zp8HPVc.png" width="250">
