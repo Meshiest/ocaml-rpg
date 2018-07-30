@@ -8,7 +8,7 @@ Cool features:
 * Undecided option - Various components in the game can change based on the current state with a fancy "Undecided" option that returns a `Some` or `None` when the function it holds is run
 * Functional - There are no for loops, while loops, or classes in this project. Only recursion and algebraic data types!
 
-To run this, you need OCaml installed.
+To run this, you need OCaml and ocamlbuild installed.
 
 ### Build
 
