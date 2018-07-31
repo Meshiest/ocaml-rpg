@@ -10,6 +10,21 @@ Cool features:
 
 To run this, you need OCaml and ocamlbuild installed.
 
+Potential extensions:
+
+* More than one interaction per room
+* Elemental weapons that deal more damage to weaker typed monsters (fire sword critically damages plant monster)
+* Shopkeepers with limited inventory as part of room interaction (also where you can sell loot items)
+* Interactive puzzles similar to how monster battles work (solve a simple math or word puzzle)
+* Weapon durability (Weapons break after a certain number of uses or battles)
+* Health potion items that do not overflow health over a certain maximum
+* Leveling and experience: killing monsters -> get experience, progressively more experience -> level
+* A map command that prints all visited rooms in a grid (not a list of coords)
+* Saving to file, Loading from file
+* Battle more than one monster at a time
+* Checkpoints to return to when the player dies
+* Mining resources / farming: ore can be mined, plants can be picked rate limited by real time
+
 ### Build
 
     make
