@@ -1,3 +1,9 @@
+(* This file was created as an example of an interactive event
+ * Everything in this file is self contained and modifications are very simple
+ * It's almost like a separate game within the game
+ * If a shopkeeper were to be implemented, this might be some useful code
+ *)
+
 open Types
 open Utils
 open Helpers

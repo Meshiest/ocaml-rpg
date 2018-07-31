@@ -1,3 +1,7 @@
+(* Core item/inventory integration is in this file
+ * If more item types were to be added, this is where they would go
+ * The actual uses of the items belong in other files. This is all utility
+ *)
 open Str
 open Utils
 open Types

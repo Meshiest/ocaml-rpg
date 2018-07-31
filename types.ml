@@ -1,3 +1,6 @@
+(* This is more or less an interface file that gives an overview of all the types in the engine
+ * If you are making changes such as adding more weapon types, player properties, etc, this is where you will be making changes
+ *)
 open Utils
 open Quadtree
 

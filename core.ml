@@ -1,3 +1,8 @@
+(* All of the main interaction the player has with the game data is here
+ * Any new commands like saving or loading would be added in here as they are core features
+ * Handling checkpoints or lives would also be done in this file
+ * A main menu, however, could be done outside of this file as a separate function
+ *)
 open Quadtree
 open Types
 open Utils

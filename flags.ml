@@ -1,3 +1,6 @@
+(* Flags are just strings stored in the state's `flags` property
+ * All they do is keep track of things the player has done like various booleans
+ *)
 open Types
 
 (* Add a flag to the state *)

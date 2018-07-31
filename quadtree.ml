@@ -1,3 +1,7 @@
+(* This is a utility module made to handle 2d lookup of objects
+ * This could be modified to properly balance the tree once nodes are added or removed
+ * If you are interested in data structures, feel free to modify it or make your own version!
+ *)
 open Utils
 
 (* A binary tree but... in four directions *)
@@ -13,6 +17,7 @@ type 'a quad_node = {
 (* Error type *)
 exception QuadError of string
 
+(* The start of every tree, an identity *)
 let empty_node : 'a quad_node = {
   value = None;
   pos = {x = 0; y = 0};
@@ -40,7 +45,7 @@ let rec quad_find (node: 'a quad_node) (loc: vec) : 'a =
 
     | _ -> raise Not_found
 
-(* Room quadtree add function *)
+(* Room quadtree add function, built to be piped ( |> operator ) into more quad_add functions *)
 let rec quad_add ((loc, value): vec * 'a) (node: 'a quad_node) : 'a quad_node =
   (* Empty node *)
   let new_node = {

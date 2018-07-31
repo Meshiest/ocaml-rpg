@@ -1,3 +1,6 @@
+(* Any miscellaneous functions that do not really belong in other files are here
+ * They are simple utility functions that are specific to this project
+ *)
 open Types
 open Utils
 open Quadtree

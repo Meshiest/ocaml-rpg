@@ -1,3 +1,9 @@
+(* This is where all the actual "game" part of the game takes place
+ * If you have no interest in modifying the engine and just want to make an epic tale, look no further!
+ * I would encourage you to look into the battle.ml file to get a better grasp on interactivity
+ * In this file, rooms, items, monsters, and game objects are developed.
+ *)
+
 (* The types module contains all the records for game state storage *)
 open Types
 
