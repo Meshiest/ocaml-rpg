@@ -50,7 +50,7 @@ let equip_weapon (state: game_state) (item: item) : game_state =
 let dequip_weapon (state: game_state) : game_state =
   let rec helper (weapon: item option) : game_state = match weapon with
     | Some weapon ->
-      {(remove_item state weapon.name 1) with weapon = None}
+      {(add_item state weapon 1) with weapon = None}
     | Undecided fn -> helper (fn state)
     | None -> state in
   helper state.weapon
@@ -61,7 +61,7 @@ let equip_armor (state: game_state) (item: item) : game_state =
 let dequip_armor (state: game_state) : game_state =
   let rec helper (armor: item option) : game_state = match armor with
     | Some armor ->
-      {(remove_item state armor.name 1) with armor = None}
+      {(add_item state armor 1) with armor = None}
     | Undecided fn -> helper (fn state)
     | None -> state in
   helper state.armor
