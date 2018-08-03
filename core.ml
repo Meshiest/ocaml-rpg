@@ -90,7 +90,7 @@ let rec game_loop (state: game_state) : unit =
         (* Handle using armor *)
         | Some {name; item_type = Armor def; _} ->
             println ("Equipping armor '" ^ name ^ "'");
-            game_loop (equip_armor (dequip_weapon state) {name; item_type = Armor def; count = 1})
+            game_loop (equip_armor (dequip_armor state) {name; item_type = Armor def; count = 1})
 
         (* Handle invalid search *)
         | None ->

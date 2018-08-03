@@ -17,7 +17,7 @@ let string_of_item_type : item_type -> string = function
 let print_item ({name; count; item_type; _}: item) : unit =
   if count = 0 then ()
   else println (name ^ (
-    if count = 1 then "" else "x" ^ string_of_int count
+    if count = 1 then "" else " x" ^ string_of_int count
   ) ^ " (" ^ string_of_item_type item_type ^ ")")
 
 (* check if the player has an item *)
